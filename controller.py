@@ -1,4 +1,3 @@
-from matplotlib.backend_bases import FigureManagerBase
 from mcculw import ul
 from mcculw.enums import ULRange
 from mcculw.ul import ULError
@@ -67,6 +66,8 @@ class LineGraphPlotter:
 VOLT0 = 2048
 PI = 3.141592653589793238
 
+import threading
+
 class System:
     def __init__(self, parent, board_num : int):
         self.parent = parent
@@ -80,16 +81,22 @@ class System:
 
         self.data = DAQData(1000)
         self.voltage_graph = LineGraphPlotter(tk.Toplevel(self.parent))
-        self.main_loop()
+        self.gui_loop()
+        
+        newthread = threading.Thread(target = self.data_loop)
+        newthread.start()
 
     def start_clicked(self): self.started = True
     def end_clicked(self): self.started = False
 
-    def main_loop(self):
-        if self.started:
-            self.data.add_data(0, self.board.read_analog(0))
+    def data_loop(self):
+        while True:
+            if self.started:
+                self.data.add_data(0, self.board.read_analog(0))
+
+    def gui_loop(self):
         self.voltage_graph.plot_data(self.data.get_data(0))
-        self.parent.after(1, self.main_loop)
+        self.parent.after(100, self.gui_loop)
 
 
 # def read_and_plot():
