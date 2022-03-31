@@ -2,8 +2,6 @@ from matplotlib.backend_bases import FigureManagerBase
 from mcculw import ul
 from mcculw.enums import ULRange
 from mcculw.ul import ULError
-from time import sleep
-from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import collections
 import matplotlib.pyplot as plt
