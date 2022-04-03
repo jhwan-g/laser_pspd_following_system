@@ -24,6 +24,7 @@ class DAQBoard:
             # Display the error
             print("read_analog error : A UL error occurred. Code: " + str(e.errorcode)
                 + " Message: " + e.message)
+            return 0, 0
 
     def write_analog(self, channel : int, value : int):
         print(ul.to_eng_units(self.board_num, self.ul_range, value))
@@ -39,16 +40,16 @@ class DAQData:
     def __init__(self, store_data_num : int):
         self.a_in = [collections.deque(np.zeros(store_data_num)) for i in range(5)]
 
-    def add_data(self, channel_num, data):
+    def add_data(self, channel_num : int, data):
         self.a_in[channel_num].popleft()
         self.a_in[channel_num].append(data)
 
-    def add_multiple_data(self, channel_num, datas):
+    def add_multiple_data(self, channel_num : int, datas):
         for i in datas:
             self.a_in[channel_num].popleft()
             self.a_in[channel_num].append(i)
 
-    def get_data(self, channel_num):
+    def get_data(self, channel_num : int):
         return self.a_in[channel_num]
 
 class LineGraphPlotter:
@@ -59,7 +60,7 @@ class LineGraphPlotter:
         self.line = FigureCanvasTkAgg(self.fig, parent)
         self.line.get_tk_widget().pack()
 
-    def plot_data(self, data):
+    def plot(self, data):
         self.ax.cla()
         self.ax.plot(data)
 
@@ -69,15 +70,17 @@ PI = 3.141592653589793238
 import threading
 
 class System:
-    def __init__(self, parent, board_num : int):
+    def __init__(self, parent : tk.Tk, board_num : int):
         self.parent = parent
         self.board = DAQBoard(board_num, ULRange.BIP5VOLTS)
-        self.started = False
+        self.started = tk.BooleanVar(value = False)
 
+        self.stat_label = tk.Label(self.parent, textvariable=self.started)
+        self.stat_label.pack(fill = tk.X)
         self.start_button = tk.Button(self.parent, text = 'start', command = self.start_clicked)
-        self.start_button.pack()
+        self.start_button.pack(fill = tk.X)
         self.end_button = tk.Button(self.parent, text = 'end', command = self.end_clicked)
-        self.end_button.pack()
+        self.end_button.pack(fill = tk.X)
 
         self.data = DAQData(1000)
         self.voltage_graph = LineGraphPlotter(tk.Toplevel(self.parent))
@@ -86,58 +89,18 @@ class System:
         newthread = threading.Thread(target = self.data_loop)
         newthread.start()
 
-    def start_clicked(self): self.started = True
-    def end_clicked(self): self.started = False
+    def start_clicked(self): self.started.set(True)
+    def end_clicked(self): self.started.set(False)
 
     def data_loop(self):
         while True:
             if self.started:
-                self.data.add_data(0, self.board.read_analog(0))
+                self.data.add_data(0, self.board.read_analog(0)[1])
 
     def gui_loop(self):
-        self.voltage_graph.plot_data(self.data.get_data(0))
+        self.voltage_graph.plot(self.data.get_data(0))
         self.parent.after(100, self.gui_loop)
 
-
-# def read_and_plot():
-#     window = tk.Tk()
-
-#     a_in0 = collections.deque(np.zeros(1000))
-
-#     def analog_plotter(i):
-#         for i in range(1000):
-#             a_in0.popleft()
-#             a_in0.append(board.read_analog(1)[1])
-
-#         ax0.cla()   
-#         #ax0.set_ylim(-5, 5)
-#         ax0.plot(a_in0)
-
-#     fig0 = plt.figure()
-#     ax0 = plt.subplot()
-#     line1 = FigureCanvasTkAgg(fig0, window)
-#     line1.get_tk_widget().pack()
-
-#     anim = FuncAnimation(fig0, analog_plotter, interval = 20)
-#     window.mainloop()
-
-# 
-
-# def degree_to_rad(x):
-#     return x * PI / 180
-
-# def sin_gen():
-#     x = 0
-#     while True:
-#         x += 1
-#         yield np.sin(degree_to_rad(x))
-
-# def write_analog(f):
-#     for i in f():
-#         board.write_analog(0, int((i + 1) * 1000 + VOLT0))
-#         time.sleep(0.0001)
-
-# write_analog(sin_gen)
 
 if __name__ == '__main__':
     window = tk.Tk()
