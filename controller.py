@@ -94,7 +94,7 @@ class System:
 
     def data_loop(self):
         while True:
-            if self.started:
+            if self.started.get():
                 self.data.add_data(0, self.board.read_analog(0)[1])
 
     def gui_loop(self):
