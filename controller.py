@@ -54,6 +54,56 @@ PI = 3.141592653589793238
 
 import threading
 
+import numpy as np
+
+class PID(object):
+    """Implementation of a PID controller.
+    This implementation is geared towards discrete time systems,
+    where PID is often called PSD (proportional-sum-difference).
+    Usage is fairly straight forward. Set the coefficients of
+    the three terms to values of your choice and call PID.update
+    with constant timesteps.
+    """
+    
+    def __init__(self, integral_len, kp=0.5, ki=0.0, kd=0.01):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.first = True
+        self.integral_len = integral_len
+
+    def update(self, error, dt):
+        """Update the PID controller.
+       
+        Computes the new control value as                 
+            u(t) = kp*err(t) + kd*d/dt(err(t)) + ki*I(e)
+        
+        where I(e) is the integral of the error up to the current timepoint.
+        Args:
+            error: Error between set point and measured value
+            dt: Time step delta
+        Returns:
+            Returns the control value u(t)
+        """
+
+        if self.first:
+            self.errors = collections.deque(np.zeros(self.integral_len))
+            self.lastError = error
+            self.first = False
+
+        derr = (error - self.lastError) / dt
+        self.errors.append(error)
+        self.errors.popleft()
+
+        self.sumError = sum(self.erros) / self.integral_len
+        self.lastError = error
+
+        u = self.kp * error + self.kd * derr + self.ki * self.sumError
+
+        return u
+
+
+
 class System:
     def __init__(self, parent : tk.Tk, board_num : int):
         self.parent = parent
