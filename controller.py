@@ -27,7 +27,7 @@ class DAQBoard:
             return 0, 0
 
     def write_analog(self, channel : int, value : int):
-        print(ul.to_eng_units(self.board_num, self.ul_range, value))
+        #print(ul.to_eng_units(self.board_num, self.ul_range, value))
         try:
             ul.a_out(self.board_num, channel, self.ul_range, value)
         except Exception as e:
@@ -36,33 +36,18 @@ class DAQBoard:
     def read_multi_analog(self, channel : int, data_num : int) -> tuple:
         return tuple(self.read_analog(channel) for _ in range(data_num))
 
-class DAQData:
-    def __init__(self, store_data_num : int):
-        self.a_in = [collections.deque(np.zeros(store_data_num)) for i in range(5)]
-
-    def add_data(self, channel_num : int, data):
-        self.a_in[channel_num].popleft()
-        self.a_in[channel_num].append(data)
-
-    def add_multiple_data(self, channel_num : int, datas):
-        for i in datas:
-            self.a_in[channel_num].popleft()
-            self.a_in[channel_num].append(i)
-
-    def get_data(self, channel_num : int):
-        return self.a_in[channel_num]
-
 class LineGraphPlotter:
     def __init__(self, parent):
         self.parent = parent
-        self.fig = plt.figure()
-        self.ax = plt.subplot()
+        self.fig, self.ax = plt.subplots(1, 1)
         self.line = FigureCanvasTkAgg(self.fig, parent)
-        self.line.get_tk_widget().pack()
+        self.line._tkcanvas.pack()
 
     def plot(self, data):
-        self.ax.cla()
-        self.ax.plot(data)
+        self.fig.clear()
+        plt.plot(data)
+        plt.draw()
+  
 
 VOLT0 = 2048
 PI = 3.141592653589793238
@@ -82,7 +67,7 @@ class System:
         self.end_button = tk.Button(self.parent, text = 'end', command = self.end_clicked)
         self.end_button.pack(fill = tk.X)
 
-        self.data = DAQData(1000)
+        self.data = collections.deque(np.zeros(1000))
         self.voltage_graph = LineGraphPlotter(tk.Toplevel(self.parent))
         self.gui_loop()
         
@@ -94,12 +79,16 @@ class System:
 
     def data_loop(self):
         while True:
-            if self.started.get():
-                self.data.add_data(0, self.board.read_analog(0)[1])
+            if self.started.get():        
+                temp, volt = self.board.read_analog(0)
+                self.data.append(volt)
+                self.data.popleft()
+                self.board.write_analog(0, temp)
+
 
     def gui_loop(self):
-        self.voltage_graph.plot(self.data.get_data(0))
-        self.parent.after(100, self.gui_loop)
+        self.voltage_graph.plot(self.data)
+        self.parent.after(500, self.gui_loop)
 
 
 if __name__ == '__main__':
