@@ -102,12 +102,26 @@ class PID(object):
 
         return u
 
+def volt_to_raw(x):
+    return int(VOLT0 + (x * 410) // 3) 
 
+def scan(istep, jstep):
+    i, j = -14, -14
+    while True:
+        j = -14
+        if i >= 14: i = -14
+        while True:
+            j += jstep
+            if j>14: break
+            yield i, j
+        i += istep
+
+        
 
 class System:
     def __init__(self, parent : tk.Tk, board_num : int):
         self.parent = parent
-        self.board = DAQBoard(board_num, ULRange.BIP5VOLTS)
+        self.board = DAQBoard(board_num, ULRange.BIP15VOLTS)
         self.started = tk.BooleanVar(value = False)
 
         self.stat_label = tk.Label(self.parent, textvariable=self.started)
@@ -128,12 +142,15 @@ class System:
     def end_clicked(self): self.started.set(False)
 
     def data_loop(self):
-        while True:
-            if self.started.get():        
-                temp, volt = self.board.read_analog(0)
-                self.data.append(volt)
-                self.data.popleft()
-                self.board.write_analog(0, temp)
+        i = 0
+        scan_pos_gen = scan(0.5, 0.5)
+        while True:    
+            if self.started.get():      
+                pos = next(scan_pos_gen)
+                print('raw', pos, volt_to_raw(pos[0]), volt_to_raw(pos[1]))
+                self.board.write_analog(0, volt_to_raw(pos[0]))
+                self.board.write_analog(1, volt_to_raw(pos[1]))
+                #time.sleep(0.1)
 
 
     def gui_loop(self):
